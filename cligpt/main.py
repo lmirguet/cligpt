@@ -41,7 +41,7 @@ class ChatSession:
     def interactive_session(self):
         while (True):
             user_input = input("> ")
-            if user_input.upper() in [ "BYE", "STOP" ]:
+            if user_input.upper() in [ "BYE", "STOP", "QUIT" ]:
                 break
             user_message = Message(USER, user_input)
             self.add_message(user_message)
