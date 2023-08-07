@@ -2,7 +2,13 @@
 
 A terminal-based ChatGPT.
 
-## Install a virtual environment and launch the program
+## Requirements
+
+To run this program, you will need:
+* a working python environment
+* an **OpenAI API key**
+
+# Install a virtual environment and launch the program
 
 We recommend that you install the needed python libraries in a virtual environment. Here is how you can do:
 
@@ -14,6 +20,10 @@ Then activate it and download the required libraries:
 ```
 .venv/bin/activate
 pip install -r requirements.txt
+```
+Now you can run the program:
+```
+python cligpt/main.py
 ```
 
 ## OpenAI documentation
