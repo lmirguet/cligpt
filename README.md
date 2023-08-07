@@ -6,9 +6,9 @@ A terminal-based ChatGPT.
 
 To run this program, you will need:
 * a working python environment
-* an **OpenAI API key**
+* an **OpenAI API key** - once you have your OpenAI account, you can create your own key at https://platform.openai.com/account/api-keys
 
-# Install a virtual environment and launch the program
+### Install a virtual environment and launch the program
 
 We recommend that you install the needed python libraries in a virtual environment. Here is how you can do:
 
