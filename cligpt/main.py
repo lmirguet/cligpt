@@ -59,11 +59,13 @@ class ChatSession:
 def list_models():
     models = openai.Model.list()
     for i in models.data:
-        print(i.id)
+        if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
+            print(i.id)
 
 def main():
     parser = argparse.ArgumentParser(description="A CLI for ChatGPT")
     parser.add_argument("--list-models", action="store_true", help="List the available OpenAI models")
+    parser.add_argument("--set-model", type=str, help="Set a certain model to be used with cligpt")
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
@@ -76,6 +78,12 @@ def main():
 
     if args.list_models == True:
         list_models()
+        exit(0)
+
+    if args.set_model is not None:
+        with open("config.ini", "w") as fp:
+            config["settings"]["OPENAI_MODEL"] = args.set_model
+            config.write(fp)
         exit(0)
 
     # run chat session
