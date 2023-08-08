@@ -2,6 +2,12 @@
 
 A terminal-based ChatGPT.
 
+Run the program with
+```
+python cligpt/main.py
+```
+Once you have imported the required libraries.
+
 ## Requirements
 
 To run this program, you will need:
@@ -28,4 +34,5 @@ python cligpt/main.py
 
 ## OpenAI documentation
 
-see https://github.com/openai/openai-cookbook/blob/main/examples/How_to_format_inputs_to_ChatGPT_models.ipynb for information
+* API documentation: https://platform.openai.com/docs/api-reference?lang=python
+* OpenAI cook book: https://github.com/openai/openai-cookbook/tree/main
