@@ -4,6 +4,8 @@ import openai
 import configparser
 from termcolor import colored
 import argparse
+import os
+import shutil
 
 USER = "user"
 SYSTEM = "system"
@@ -71,16 +73,47 @@ def list_models():
         if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
             print(i.id)
 
+def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
+    setting_file = "config.ini"
+    config_modified = False
+
+    if not os.path.exists(setting_file):
+        shutil.copy("config_sample.ini", setting_file)
+
+    config = configparser.ConfigParser()
+    config.read(setting_file)
+
+    openai_key = config["settings"]["OPENAI_API_KEY"]
+
+    if len(openai_key) < 5:
+        openai_key = input("Enter your OpenAI secret key: ")
+        config["settings"]["OPENAI_API_KEY"] = openai_key
+        config_modified = True
+
+    openai.api_key = openai_key
+
+    try:
+        openai.Engine.list()
+    except openai.error.OpenAIError as e:
+        if "authentication" in str(e).lower():
+            print("This openai API key is invalid.")
+            exit(1)
+        raise  # If the error is due to some other reason, raise it
+
+    if config_modified:
+        with open(setting_file, "w") as fp:
+            config.write(fp)
+
+    return config
+
 def main():
     parser = argparse.ArgumentParser(description="A CLI for ChatGPT")
     parser.add_argument("--list-models", action="store_true", help="List the available OpenAI models")
     parser.add_argument("--set-model", type=str, help="Set a certain model to be used with cligpt")
     args = parser.parse_args()
 
-    config = configparser.ConfigParser()
-    config.read("config.ini")
+    config = check_if_config_exists_and_api_key()
 
-    openai.api_key = config["settings"]["OPENAI_API_KEY"]
     openai_model = config["settings"]["OPENAI_MODEL"]
     openai_temperature = float(config["settings"]["OPENAI_TEMPERATURE"])
     assistant_color = config["settings"]["ASSISTANT_COLOR"]
