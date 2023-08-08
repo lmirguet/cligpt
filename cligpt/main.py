@@ -1,4 +1,6 @@
-# an implementation for a terminal-based ChatGPT
+#
+# An implementation for a terminal-based ChatGPT
+# Apache License (2.0)
 #
 import openai
 import configparser
@@ -12,6 +14,9 @@ SYSTEM = "system"
 ASSISTANT = "assistant"
 
 class Message:
+    """
+    Represents a chat message with attributes like role and content
+    """
     def __init__(self, role, message) -> None:
         if role not in [ USER, SYSTEM, ASSISTANT ]:
             raise ValueError("The role can only one of 'system', 'user' or 'assitant'")
@@ -20,9 +25,18 @@ class Message:
         self.content = message
     
 def format_message(message: Message):
+    """
+    A utility function to transform a message into a dict
+    (useful for mapping a list of messages)
+    """
     return { "role": message.role, "content": message.content }
 
 class ChatSession:
+    """
+    Represents an interactive chat session with OpenAI's ChatGPT. 
+    This class has methods to add messages, call OpenAI's chat completion 
+    endpoint, print responses, and run an interactive session
+    """
     def __init__(self, openai_model: str, openai_temperature: float, assistant_color: str) -> None:
         self.model = openai_model
         self.messages = []
@@ -41,19 +55,27 @@ class ChatSession:
         )
         try:
             for chunk in chat_completion:
-                current_content = chunk["choices"][0]["delta"].get("content","")
+                current_content = chunk["choices"][0]
                 yield current_content
         except Exception as e:
             print("OpenAI Response (Streaming) Error: "+str(e))
 
     def print_and_compile_message(self, response):
         result = ""
+        max_token_exceeded = False
         print()
         for c in response:
-            result += c
-            print(colored(c, self.color), end="")
+            txt = c["delta"].get("content","")
+            result += txt
+            print(colored(txt, self.color), end="", flush=True)
+
+            if c["finish_reason"] is not None and c["finish_reason"] == "length":
+               max_token_exceeded = True
         print()
         print()
+        if max_token_exceeded:
+            print("Maximum number of tokens exceeded.")
+            exit(0)
         return Message(ASSISTANT, result)
 
     def interactive_session(self):
@@ -68,12 +90,18 @@ class ChatSession:
             self.add_message(response_message)
 
 def list_models():
+    """
+    Action for listing the available chat models
+    """
     models = openai.Model.list()
     for i in models.data:
         if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
             print(i.id)
 
 def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
+    """
+    Initialize the configuration, create it if it doesn't exist
+    """
     setting_file = "config.ini"
     config_modified = False
 
@@ -107,7 +135,13 @@ def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
     return config
 
 def main():
-    parser = argparse.ArgumentParser(description="A CLI for ChatGPT")
+    """
+    Main function
+    """
+    parser = argparse.ArgumentParser(description="""A CLI for ChatGPT.
+You can type any question you want to ChatGPT.
+Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
+formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--list-models", action="store_true", help="List the available OpenAI models")
     parser.add_argument("--set-model", type=str, help="Set a certain model to be used with cligpt")
     args = parser.parse_args()
