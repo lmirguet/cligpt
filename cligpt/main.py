@@ -16,14 +16,6 @@ class Message:
 
         self.role = role
         self.content = message
-
-    def print(self, assistant_color):
-        print()
-        if self.role == ASSISTANT:
-            print(colored(self.content, assistant_color))
-        else:
-            print(self.content)
-        print()
     
 def format_message(message: Message):
     return { "role": message.role, "content": message.content }
@@ -38,6 +30,30 @@ class ChatSession:
     def add_message(self, message: Message):
         self.messages.append(message)
 
+    def call_streamed_chat_completion(self):
+        chat_completion = openai.ChatCompletion.create(
+                model = self.model,
+                messages = list(map(format_message, self.messages)),
+                temperature = self.temperature,
+                stream = True
+        )
+        try:
+            for chunk in chat_completion:
+                current_content = chunk["choices"][0]["delta"].get("content","")
+                yield current_content
+        except Exception as e:
+            print("OpenAI Response (Streaming) Error: "+str(e))
+
+    def print_and_compile_message(self, response):
+        result = ""
+        print()
+        for c in response:
+            result += c
+            print(colored(c, self.color), end="")
+        print()
+        print()
+        return Message(ASSISTANT, result)
+
     def interactive_session(self):
         while (True):
             user_input = input("> ")
@@ -45,16 +61,9 @@ class ChatSession:
                 break
             user_message = Message(USER, user_input)
             self.add_message(user_message)
-            chat_completion = openai.ChatCompletion.create(
-                model = self.model,
-                messages = list(map(format_message, self.messages)),
-                temperature = self.temperature
-            )
-            completion_obj = chat_completion.choices[0]
-            response_message = Message(completion_obj['message']['role'],
-                                    completion_obj['message']['content'])
+            response = self.call_streamed_chat_completion()
+            response_message = self.print_and_compile_message(response)
             self.add_message(response_message)
-            response_message.print(self.color)
 
 def list_models():
     models = openai.Model.list()
