@@ -130,7 +130,7 @@ def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
         openai.Engine.list()
     except openai.error.OpenAIError as e:
         if "authentication" in str(e).lower():
-            print("This openai API key is invalid.")
+            print("This openai API key is invalid. Or OpenAI API could not be reached.")
             exit(1)
         raise  # If the error is due to some other reason, raise it
 
