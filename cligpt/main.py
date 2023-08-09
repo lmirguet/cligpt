@@ -98,6 +98,12 @@ def list_models():
         if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
             print(i.id)
 
+def get_model(config: configparser.ConfigParser):
+    """
+    Action for getting the current chat model
+    """
+    print(config["settings"]["OPENAI_MODEL"])
+
 def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
     """
     Initialize the configuration, create it if it doesn't exist
@@ -142,8 +148,9 @@ def main():
 You can type any question you want to ChatGPT.
 Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
 formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--list-models", action="store_true", help="List the available OpenAI models")
-    parser.add_argument("--set-model", type=str, help="Set a certain model to be used with cligpt")
+    parser.add_argument("--list-models", action="store_true", help="list the available OpenAI models")
+    parser.add_argument("--set-model", type=str, help="set a certain model to be used with cligpt")
+    parser.add_argument("--get-model", action="store_true", help="get the currently used OpenAI model")
     args = parser.parse_args()
 
     config = check_if_config_exists_and_api_key()
@@ -160,6 +167,10 @@ formatter_class=argparse.RawTextHelpFormatter)
         with open("config.ini", "w") as fp:
             config["settings"]["OPENAI_MODEL"] = args.set_model
             config.write(fp)
+        exit(0)
+
+    if args.get_model == True:
+        get_model(config)
         exit(0)
 
     # run chat session
