@@ -13,31 +13,38 @@ USER = "user"
 SYSTEM = "system"
 ASSISTANT = "assistant"
 
+
 class Message:
     """
     Represents a chat message with attributes like role and content
     """
+
     def __init__(self, role, message) -> None:
-        if role not in [ USER, SYSTEM, ASSISTANT ]:
+        if role not in [USER, SYSTEM, ASSISTANT]:
             raise ValueError("The role can only one of 'system', 'user' or 'assitant'")
 
         self.role = role
         self.content = message
-    
+
+
 def format_message(message: Message):
     """
     A utility function to transform a message into a dict
     (useful for mapping a list of messages)
     """
-    return { "role": message.role, "content": message.content }
+    return {"role": message.role, "content": message.content}
+
 
 class ChatSession:
     """
-    Represents an interactive chat session with OpenAI's ChatGPT. 
-    This class has methods to add messages, call OpenAI's chat completion 
+    Represents an interactive chat session with OpenAI's ChatGPT.
+    This class has methods to add messages, call OpenAI's chat completion
     endpoint, print responses, and run an interactive session
     """
-    def __init__(self, openai_model: str, openai_temperature: float, assistant_color: str) -> None:
+
+    def __init__(
+        self, openai_model: str, openai_temperature: float, assistant_color: str
+    ) -> None:
         self.model = openai_model
         self.messages = []
         self.temperature = openai_temperature
@@ -48,29 +55,29 @@ class ChatSession:
 
     def call_streamed_chat_completion(self):
         chat_completion = openai.ChatCompletion.create(
-                model = self.model,
-                messages = list(map(format_message, self.messages)),
-                temperature = self.temperature,
-                stream = True
+            model=self.model,
+            messages=list(map(format_message, self.messages)),
+            temperature=self.temperature,
+            stream=True,
         )
         try:
             for chunk in chat_completion:
                 current_content = chunk["choices"][0]
                 yield current_content
         except Exception as e:
-            print("OpenAI Response (Streaming) Error: "+str(e))
+            print("OpenAI Response (Streaming) Error: " + str(e))
 
     def print_and_compile_message(self, response):
         result = ""
         max_token_exceeded = False
         print()
         for c in response:
-            txt = c["delta"].get("content","")
+            txt = c["delta"].get("content", "")
             result += txt
             print(colored(txt, self.color), end="", flush=True)
 
             if c["finish_reason"] is not None and c["finish_reason"] == "length":
-               max_token_exceeded = True
+                max_token_exceeded = True
         print()
         print()
         if max_token_exceeded:
@@ -78,16 +85,23 @@ class ChatSession:
             exit(0)
         return Message(ASSISTANT, result)
 
-    def interactive_session(self):
-        while (True):
+    def interactive_session(self, first_message=None):
+        if first_message is not None:
+            self.session_instance(first_message)
+
+        while True:
             user_input = input("> ")
-            if user_input.upper() in [ "BYE", "STOP", "QUIT" ]:
+            if user_input.upper() in ["BYE", "STOP", "QUIT"]:
                 break
-            user_message = Message(USER, user_input)
-            self.add_message(user_message)
-            response = self.call_streamed_chat_completion()
-            response_message = self.print_and_compile_message(response)
-            self.add_message(response_message)
+            self.session_instance(user_input)
+
+    def session_instance(self, user_input):
+        user_message = Message(USER, user_input)
+        self.add_message(user_message)
+        response = self.call_streamed_chat_completion()
+        response_message = self.print_and_compile_message(response)
+        self.add_message(response_message)
+
 
 def list_models():
     """
@@ -98,11 +112,13 @@ def list_models():
         if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
             print(i.id)
 
+
 def get_model(config: configparser.ConfigParser):
     """
     Action for getting the current chat model
     """
     print(config["settings"]["OPENAI_MODEL"])
+
 
 def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
     """
@@ -140,17 +156,31 @@ def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
 
     return config
 
+
 def main():
     """
     Main function
     """
-    parser = argparse.ArgumentParser(description="""A CLI for ChatGPT.
+    parser = argparse.ArgumentParser(
+        description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
 Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
-formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--list-models", action="store_true", help="list the available OpenAI models")
-    parser.add_argument("--set-model", type=str, help="set a certain model to be used with cligpt")
-    parser.add_argument("--get-model", action="store_true", help="get the currently used OpenAI model")
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--list-models", action="store_true", help="list the available OpenAI models"
+    )
+    parser.add_argument(
+        "--set-model", type=str, help="set a certain model to be used with cligpt"
+    )
+    parser.add_argument(
+        "--get-model", action="store_true", help="get the currently used OpenAI model"
+    )
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        help="an input file containing a first message for ChatGPT",
+    )
     args = parser.parse_args()
 
     config = check_if_config_exists_and_api_key()
@@ -173,10 +203,15 @@ formatter_class=argparse.RawTextHelpFormatter)
         get_model(config)
         exit(0)
 
+    first_message = None
+    if args.input_file is not None:
+        with open(args.input_file, "r") as fp:
+            first_message = fp.read()
+
     # run chat session
     session = ChatSession(openai_model, openai_temperature, assistant_color)
-    session.interactive_session()
+    session.interactive_session(first_message)
+
 
 if __name__ == "__main__":
     main()
-
