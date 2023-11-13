@@ -3,6 +3,8 @@
 # Apache License (2.0)
 #
 import openai
+from openai import OpenAI
+
 import configparser
 from termcolor import colored
 import argparse
@@ -43,26 +45,25 @@ class ChatSession:
     """
 
     def __init__(
-        self, openai_model: str, openai_temperature: float, assistant_color: str
+        self, openai_model: str, openai_temperature: float, assistant_color: str, client: OpenAI
     ) -> None:
         self.model = openai_model
         self.messages = []
         self.temperature = openai_temperature
         self.color = assistant_color
+        self.client = client
 
     def add_message(self, message: Message):
         self.messages.append(message)
 
     def call_streamed_chat_completion(self):
-        chat_completion = openai.ChatCompletion.create(
-            model=self.model,
+        chat_completion = self.client.chat.completions.create(model=self.model,
             messages=list(map(format_message, self.messages)),
             temperature=self.temperature,
-            stream=True,
-        )
+            stream=True)
         try:
             for chunk in chat_completion:
-                current_content = chunk["choices"][0]
+                current_content = chunk.choices[0]
                 yield current_content
         except Exception as e:
             print("OpenAI Response (Streaming) Error: " + str(e))
@@ -72,12 +73,14 @@ class ChatSession:
         max_token_exceeded = False
         print()
         for c in response:
-            txt = c["delta"].get("content", "")
-            result += txt
-            print(colored(txt, self.color), end="", flush=True)
-
-            if c["finish_reason"] is not None and c["finish_reason"] == "length":
+            if c.finish_reason is not None and c.finish_reason == "length":
                 max_token_exceeded = True
+            else:
+                txt = c.delta.content
+                if txt is not None:
+                    result += txt
+                    print(colored(txt, self.color), end="", flush=True)
+
         print()
         print()
         if max_token_exceeded:
@@ -103,11 +106,11 @@ class ChatSession:
         self.add_message(response_message)
 
 
-def list_models():
+def list_models(client: OpenAI):
     """
     Action for listing the available chat models
     """
-    models = openai.Model.list()
+    models = client.models.list()
     for i in models.data:
         if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
             print(i.id)
@@ -120,7 +123,7 @@ def get_model(config: configparser.ConfigParser):
     print(config["settings"]["OPENAI_MODEL"])
 
 
-def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
+def check_if_config_exists_and_api_key() -> (configparser.ConfigParser, OpenAI):
     """
     Initialize the configuration, create it if it doesn't exist
     """
@@ -140,11 +143,11 @@ def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
         config["settings"]["OPENAI_API_KEY"] = openai_key
         config_modified = True
 
-    openai.api_key = openai_key
+    client = OpenAI(api_key=openai_key)
 
     try:
-        openai.Engine.list()
-    except openai.error.OpenAIError as e:
+        client.models.list()
+    except openai.OpenAIError as e:
         if "authentication" in str(e).lower():
             print("This openai API key is invalid. Or OpenAI API could not be reached.")
             exit(1)
@@ -154,7 +157,7 @@ def check_if_config_exists_and_api_key() -> configparser.ConfigParser:
         with open(setting_file, "w") as fp:
             config.write(fp)
 
-    return config
+    return config, client
 
 
 def main():
@@ -183,14 +186,14 @@ Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
     )
     args = parser.parse_args()
 
-    config = check_if_config_exists_and_api_key()
+    config, client = check_if_config_exists_and_api_key()
 
     openai_model = config["settings"]["OPENAI_MODEL"]
     openai_temperature = float(config["settings"]["OPENAI_TEMPERATURE"])
     assistant_color = config["settings"]["ASSISTANT_COLOR"]
 
     if args.list_models == True:
-        list_models()
+        list_models(client)
         exit(0)
 
     if args.set_model is not None:
@@ -209,7 +212,7 @@ Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
             first_message = fp.read()
 
     # run chat session
-    session = ChatSession(openai_model, openai_temperature, assistant_color)
+    session = ChatSession(openai_model, openai_temperature, assistant_color, client)
     session.interactive_session(first_message)
 
 
