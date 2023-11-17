@@ -96,6 +96,13 @@ class ChatSession:
             user_input = input("> ")
             if user_input.upper() in ["BYE", "STOP", "QUIT"]:
                 break
+            if user_input.upper() in ("S", "START", "START_PROMPT"): # multi-line prompts
+                user_input = ""
+                inp = input("> ")
+                while inp.upper() not in ("E", "END", "END_PROMPT"):
+                    user_input += inp + '\n'
+                    inp = input("> ")
+
             self.session_instance(user_input)
 
     def session_instance(self, user_input):
@@ -167,7 +174,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
-Use a simple 'bye', 'stop' or 'quit' to quit the session.""",
+Use a simple 'bye', 'stop' or 'quit' to quit the session.
+Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
