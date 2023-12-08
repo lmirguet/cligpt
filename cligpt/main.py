@@ -94,7 +94,7 @@ class ChatSession:
 
         while True:
             user_input = input("> ")
-            if user_input.upper() in ["BYE", "STOP", "QUIT"]:
+            if user_input.upper() in ["BYE", "STOP", "QUIT", "Q"]:
                 break
             if user_input.upper() in ("S", "START", "START_PROMPT"): # multi-line prompts
                 user_input = ""
@@ -174,7 +174,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
-Use a simple 'bye', 'stop' or 'quit' to quit the session.
+Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session.
 Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -191,6 +191,11 @@ Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
         "--input-file",
         type=str,
         help="an input file containing a first message for ChatGPT",
+    )
+    parser.add_argument(
+        "--working-directory",
+        type=str,
+        help="the working directory from where the files should be loaded"
     )
     args = parser.parse_args()
 
@@ -216,7 +221,11 @@ Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
 
     first_message = None
     if args.input_file is not None:
-        with open(args.input_file, "r") as fp:
+        if args.working_directory is not None:
+            filepath = os.path.join(args.working_directory, args.input_file)
+        else:
+            filepath = args.input_file
+        with open(filepath, "r") as fp:
             first_message = fp.read()
 
     # run chat session
