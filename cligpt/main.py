@@ -88,7 +88,7 @@ class ChatSession:
             exit(0)
         return Message(ASSISTANT, result)
 
-    def interactive_session(self, first_message=None):
+    def interactive_session(self, first_message=None, current_directory=None):
         if first_message is not None:
             self.session_instance(first_message)
 
@@ -100,10 +100,24 @@ class ChatSession:
                 user_input = ""
                 inp = input("> ")
                 while inp.upper() not in ("E", "END", "END_PROMPT"):
+                    inp = self.check_if_load_file(current_directory, inp)
                     user_input += inp + '\n'
                     inp = input("> ")
 
+            user_input = self.check_if_load_file(current_directory, user_input)
+
             self.session_instance(user_input)
+
+    def check_if_load_file(self, current_directory, user_input):
+        if user_input.upper().startswith("F "):
+            filename = user_input.split(' ')[1]
+            if current_directory is not None:
+                filepath = os.path.join(current_directory, filename)
+            else:
+                filepath = filename
+            with open(filepath, "r") as fp:
+                user_input = fp.read()
+        return user_input
 
     def session_instance(self, user_input):
         user_message = Message(USER, user_input)
@@ -175,7 +189,8 @@ def main():
         description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
 Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session.
-Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
+Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.
+Use 'f FILENAME' to inline a file.""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
@@ -230,7 +245,7 @@ Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.""",
 
     # run chat session
     session = ChatSession(openai_model, openai_temperature, assistant_color, client)
-    session.interactive_session(first_message)
+    session.interactive_session(first_message, args.working_directory)
 
 
 if __name__ == "__main__":
