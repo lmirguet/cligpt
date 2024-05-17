@@ -103,10 +103,28 @@ class ChatSession:
                     inp = self.check_if_load_file(current_directory, inp)
                     user_input += inp + '\n'
                     inp = input("> ")
-
             user_input = self.check_if_load_file(current_directory, user_input)
 
+            if self.check_if_requesting_image(user_input):
+                continue
+
             self.session_instance(user_input)
+
+    def check_if_requesting_image(self, user_input):
+        ## split user_input into a list of string separated by blanks
+        sub_input = user_input.split()
+        if sub_input[0].upper() in [ "I", "IMAGE"]:
+            # get the substring of user_input without the first word
+            prompt = " ".join(sub_input[1:])
+            print("Generating image...")
+            size = "1024x1024"
+            quality = "hd"
+            model = "dall-e-3"
+            style = "natural"
+            images = self.client.images.generate(prompt=prompt, n=1, size=size, quality=quality, model=model, style=style)
+            print(images.data[0].url)
+            return True
+        return False
 
     def check_if_load_file(self, current_directory, user_input):
         if user_input.upper().startswith("F "):
@@ -190,7 +208,8 @@ def main():
 You can type any question you want to ChatGPT.
 Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session.
 Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.
-Use 'f FILENAME' to inline a file.""",
+Use 'f FILENAME' to inline a file.
+Use 'i' or 'image' to generate an image.""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
