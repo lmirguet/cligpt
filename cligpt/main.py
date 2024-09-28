@@ -6,7 +6,12 @@ import openai
 from openai import OpenAI
 
 import configparser
-from termcolor import colored
+from prompt_toolkit import PromptSession
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.shortcuts import print_formatted_text
+from prompt_toolkit.key_binding import KeyBindings
+
 import argparse
 import os
 import shutil
@@ -68,6 +73,10 @@ class ChatSession:
         except Exception as e:
             print("OpenAI Response (Streaming) Error: " + str(e))
 
+    def print_colored_text(self, text, color):
+            formatted_text = FormattedText([(color, text)])
+            print_formatted_text(formatted_text, end='')
+
     def print_and_compile_message(self, response):
         result = ""
         max_token_exceeded = False
@@ -79,7 +88,7 @@ class ChatSession:
                 txt = c.delta.content
                 if txt is not None:
                     result += txt
-                    print(colored(txt, self.color), end="", flush=True)
+                    self.print_colored_text(txt, self.color)
 
         print()
         print()
@@ -89,26 +98,46 @@ class ChatSession:
         return Message(ASSISTANT, result)
 
     def interactive_session(self, first_message=None, current_directory=None):
+        session = PromptSession()
+        kb = KeyBindings()
+
+        @kb.add('c-space')
+        def _(event):
+            event.app.current_buffer.validate_and_handle()
+
+        @kb.add('enter')
+        def _(event):
+            event.app.current_buffer.insert_text('\n')
+
         if first_message is not None:
             self.session_instance(first_message)
 
-        while True:
-            user_input = input("> ")
-            if user_input.upper() in ["BYE", "STOP", "QUIT", "Q"]:
-                break
-            if user_input.upper() in ("S", "START", "START_PROMPT"): # multi-line prompts
-                user_input = ""
-                inp = input("> ")
-                while inp.upper() not in ("E", "END", "END_PROMPT"):
-                    inp = self.check_if_load_file(current_directory, inp)
-                    user_input += inp + '\n'
-                    inp = input("> ")
-            user_input = self.check_if_load_file(current_directory, user_input)
+        with patch_stdout():
+            while True:
+                try:
+                    user_input = session.prompt("> ", key_bindings=kb, multiline=True)
+                except (EOFError, KeyboardInterrupt):
+                    break
 
-            if self.check_if_requesting_image(user_input):
-                continue
+                if user_input.upper() in ["BYE", "STOP", "QUIT", "Q"]:
+                    break
+                if user_input.upper() in ("S", "START", "START_PROMPT"):  # multi-line prompts
+                    user_input = ""
+                    while True:
+                        try:
+                            inp = session.prompt("> ", key_bindings=kb, multiline=True)
+                        except (EOFError, KeyboardInterrupt):
+                            break
+                        if inp.upper() in ("E", "END", "END_PROMPT"):
+                            break
+                        inp = self.check_if_load_file(current_directory, inp)
+                        user_input += inp + '\n'
+                user_input = self.check_if_load_file(current_directory, user_input)
 
-            self.session_instance(user_input)
+                if self.check_if_requesting_image(user_input):
+                    continue
+
+                self.session_instance(user_input)
 
     def check_if_requesting_image(self, user_input):
         ## split user_input into a list of string separated by blanks
@@ -211,6 +240,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
+Use CTRL+SPACE to valide your input.
 Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session.
 Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.
 Use 'f FILENAME' to inline a file.
