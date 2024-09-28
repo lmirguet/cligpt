@@ -14,7 +14,7 @@ import shutil
 USER = "user"
 SYSTEM = "system"
 ASSISTANT = "assistant"
-
+IMAGE_QUALITY = [ "standard", "hd" ]
 
 class Message:
     """
@@ -114,13 +114,18 @@ class ChatSession:
         ## split user_input into a list of string separated by blanks
         sub_input = user_input.split()
         if sub_input[0].upper() in [ "I", "IMAGE"]:
+            words_used = 1
             # get the substring of user_input without the first word
-            prompt = " ".join(sub_input[1:])
             print("Generating image...")
-            size = "1024x1024"
-            quality = "hd"
+            size = "1792x1024"
+            if sub_input[words_used].upper() in IMAGE_QUALITY:
+                quality = sub_input[words_used].lower()
+                words_used = words_used + 1
+            else:
+                quality = "standard"
             model = "dall-e-3"
             style = "natural"
+            prompt = " ".join(sub_input[words_used:])
             images = self.client.images.generate(prompt=prompt, n=1, size=size, quality=quality, model=model, style=style)
             print(images.data[0].url)
             return True
