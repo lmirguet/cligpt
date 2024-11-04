@@ -142,7 +142,7 @@ class ChatSession:
     def check_if_requesting_image(self, user_input):
         ## split user_input into a list of string separated by blanks
         sub_input = user_input.split()
-        if sub_input[0].upper() in [ "I", "IMAGE"]:
+        if sub_input[0].upper() in [ "IMG", "IMAGE"]:
             words_used = 1
             # get the substring of user_input without the first word
             print("Generating image...")
@@ -184,9 +184,13 @@ def list_models(client: OpenAI):
     Action for listing the available chat models
     """
     models = client.models.list()
+    printedmodels = []
     for i in models.data:
-        if i.id.startswith("gpt-3.5") or i.id.startswith("gpt-4"):
-            print(i.id)
+        if i.id.startswith("gpt") or i.id.startswith("chatgpt") or i.id.startswith("o1"):
+            printedmodels.append(i.id)
+    printedmodels.sort()
+    for i in printedmodels:
+        print(i)
 
 
 def get_model(config: configparser.ConfigParser):
@@ -240,11 +244,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="""A CLI for ChatGPT.
 You can type any question you want to ChatGPT.
-Use CTRL+SPACE to valide your input.
-Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session.
+Use CTRL+SPACE to validate your input.
+Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session (or CTRL+D).
 Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.
 Use 'f FILENAME' to inline a file.
-Use 'i' or 'image' to generate an image.""",
+Use 'img' or 'image' to generate an image.""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
