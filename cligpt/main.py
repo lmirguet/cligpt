@@ -136,10 +136,33 @@ class ChatSession:
 
                 if self.check_if_requesting_image(user_input):
                     continue
+                if self.check_if_requesting_imageedit(user_input, current_directory):
+                    continue
 
                 self.session_instance(user_input)
 
+    def check_if_requesting_imageedit(self, user_input, current_directory):
+        sub_input = user_input.split()
+        if len(sub_input) < 3:
+            return False
+        if sub_input[0].upper() in [ "IMGEDIT" ]:
+            filename = sub_input[1]
+            filepath = os.path.join(current_directory, filename)
+            prompt = " ".join(sub_input[2:])
+            print("Generating image edit...")
+            response = self.client.images.edit(
+                image=open(filepath, "rb"),
+                prompt=prompt,
+                n=1,
+                size="1024x1024"
+            )
+            print(response.data[0].url)
+            return True
+        return False
+
     def check_if_requesting_image(self, user_input):
+        if len(user_input) < 2:
+            return False
         ## split user_input into a list of string separated by blanks
         sub_input = user_input.split()
         if sub_input[0].upper() in [ "IMG", "IMAGE"]:
@@ -248,7 +271,9 @@ Use CTRL+SPACE to validate your input.
 Use a simple 'bye', 'stop', 'quit' or 'q' to quit the session (or CTRL+D).
 Use 's' or 'start' to start a multi-line prompt, and 'e' or 'end' to end it.
 Use 'f FILENAME' to inline a file.
-Use 'img' or 'image' to generate an image.""",
+Use 'img' or 'image' to generate an image.
+Use 'imgedit' to edit an image.
+""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
