@@ -2,6 +2,7 @@
 # An implementation for a terminal-based ChatGPT
 # Apache License (2.0)
 #
+from typing import Tuple
 import openai
 from openai import OpenAI
 
@@ -54,7 +55,10 @@ class ChatSession:
     ) -> None:
         self.model = openai_model
         self.messages = []
-        self.temperature = openai_temperature
+        if openai_model.startswith("o"):
+            self.temperature = 1.0
+        else:
+            self.temperature = openai_temperature
         self.color = assistant_color
         self.client = client
 
@@ -223,7 +227,7 @@ def get_model(config: configparser.ConfigParser):
     print(config["settings"]["OPENAI_MODEL"])
 
 
-def check_if_config_exists_and_api_key() -> (configparser.ConfigParser, OpenAI):
+def check_if_config_exists_and_api_key() -> Tuple[configparser.ConfigParser, OpenAI]:
     """
     Initialize the configuration, create it if it doesn't exist
     """
